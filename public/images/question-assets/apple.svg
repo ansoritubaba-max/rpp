@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Apel">
+  <rect width="64" height="64" rx="14" fill="#fff1f2"/>
+  <path d="M32 21c-9-7-20-1-19 11 1 12 8 21 15 20 2 0 3-1 4-1s2 1 4 1c7 1 14-8 15-20 1-12-10-18-19-11Z" fill="#ef4444" stroke="#b91c1c" stroke-width="2"/>
+  <path d="M32 22c0-7 2-11 7-14" fill="none" stroke="#6b3f1d" stroke-width="3" stroke-linecap="round"/>
+  <path d="M34 16c4-7 10-7 14-5-2 6-7 9-14 8" fill="#4ade80" stroke="#15803d" stroke-width="1.5"/>
+  <ellipse cx="23" cy="31" rx="4" ry="7" fill="#fff" opacity=".35" transform="rotate(25 23 31)"/>
+</svg>

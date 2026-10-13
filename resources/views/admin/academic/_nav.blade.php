@@ -1,0 +1,4 @@
+<div class="mb-6 flex flex-wrap gap-2 rounded-2xl border border-slate-200/80 bg-white p-2 shadow-sm">
+    <a href="{{ route('admin.academic.index') }}" class="rounded-xl px-4 py-2.5 text-sm font-bold transition {{ request()->routeIs('admin.academic.index', 'admin.academic.levels.*', 'admin.academic.grades.*', 'admin.academic.subjects.*', 'admin.academic.years.*', 'admin.academic.curriculums.*') ? 'bg-brand-600 text-white' : 'text-slate-500 hover:bg-slate-50 hover:text-brand-700' }}">Master akademik</a>
+    <a href="{{ route('admin.academic.content.index') }}" class="rounded-xl px-4 py-2.5 text-sm font-bold transition {{ request()->routeIs('admin.academic.content.*', 'admin.academic.outcomes.*', 'admin.academic.objectives.*', 'admin.academic.competencies.*') ? 'bg-brand-600 text-white' : 'text-slate-500 hover:bg-slate-50 hover:text-brand-700' }}">CP, TP & KI/KD</a>
+</div>

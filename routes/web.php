@@ -1,0 +1,160 @@
+<?php
+
+use App\Http\Controllers\AccountSessionController;
+use App\Http\Controllers\Admin\AcademicContentController;
+use App\Http\Controllers\Admin\AcademicController;
+use App\Http\Controllers\Admin\AiModelController;
+use App\Http\Controllers\Admin\AiMonitoringController;
+use App\Http\Controllers\Admin\AiProviderController;
+use App\Http\Controllers\Admin\AiRoutingController;
+use App\Http\Controllers\Admin\AuditLogController;
+use App\Http\Controllers\Admin\BackupController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\DocumentTemplateController;
+use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
+use App\Http\Controllers\Admin\PlanController as AdminPlanController;
+use App\Http\Controllers\Admin\SubscriptionController as AdminSubscriptionController;
+use App\Http\Controllers\Admin\TeacherController as AdminTeacherController;
+use App\Http\Controllers\Admin\TemplateSectionController;
+use App\Http\Controllers\Admin\SystemSettingsController;
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\EmailVerificationController;
+use App\Http\Controllers\Auth\GoogleAuthController;
+use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\BankQuestionController;
+use App\Http\Controllers\BrandingController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\QuestionSetController;
+use App\Http\Controllers\CreateHubController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\DocumentExportController;
+use App\Http\Controllers\SchoolController;
+use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\TeacherCheckoutController;
+use App\Http\Controllers\MidtransWebhookController;
+use App\Livewire\FeatureGenerator;
+use App\Livewire\RppWizard;
+use Illuminate\Support\Facades\Route;
+
+Route::view('/', 'welcome')->name('home');
+Route::get('/branding/{kind}', BrandingController::class)->whereIn('kind', ['logo', 'favicon'])->name('branding.show');
+Route::post('/webhooks/midtrans', MidtransWebhookController::class)->middleware('throttle:120,1')->name('webhooks.midtrans');
+
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
+    Route::post('/login', [AuthenticatedSessionController::class, 'store'])->name('login.store');
+    Route::get('/forgot-password', [PasswordResetController::class, 'requestForm'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendLink'])->middleware('throttle:5,1')->name('password.email');
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'resetForm'])->name('password.reset');
+    Route::post('/reset-password', [PasswordResetController::class, 'reset'])->middleware('throttle:10,1')->name('password.update');
+    Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
+    Route::post('/register', [RegisteredUserController::class, 'store'])->name('register.store');
+    Route::get('/auth/google', [GoogleAuthController::class, 'redirectLogin'])->middleware('throttle:10,1')->name('google.redirect');
+});
+
+Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])
+    ->middleware('throttle:20,1')
+    ->name('google.callback');
+
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+    Route::get('/verify-email', [EmailVerificationController::class, 'notice'])->name('verification.notice');
+    Route::post('/verify-email', [EmailVerificationController::class, 'verify'])->middleware('throttle:10,1')->name('verification.verify');
+    Route::post('/verify-email/resend', [EmailVerificationController::class, 'resend'])->middleware('throttle:3,10')->name('verification.resend');
+    Route::get('/account/google/connect', [GoogleAuthController::class, 'redirectLink'])->middleware('throttle:10,1')->name('account.google.connect');
+    Route::middleware(['verified-email', \App\Http\Middleware\EnsureNotInMaintenance::class])->group(function () {
+        Route::get('/account/sessions', [AccountSessionController::class, 'index'])->name('account.sessions.index');
+        Route::delete('/account/sessions/others', [AccountSessionController::class, 'destroyOthers'])->name('account.sessions.others');
+        Route::delete('/account/sessions/{sessionId}', [AccountSessionController::class, 'destroy'])->name('account.sessions.destroy');
+        Route::get('/dashboard', DashboardController::class)->name('dashboard');
+        Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::patch('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
+        Route::patch('/notifications/{notification}', [NotificationController::class, 'read'])->name('notifications.read');
+        Route::get('/create', CreateHubController::class)->name('create.index');
+        Route::get('/rpp/create', RppWizard::class)->name('rpp.create');
+        Route::get('/create/{featureCode}', FeatureGenerator::class)
+            ->whereIn('featureCode', FeatureGenerator::FEATURE_CODES)
+            ->name('generator.create');
+        Route::get('/bank-soal', [BankQuestionController::class, 'index'])->name('questions.index');
+        Route::get('/bank-soal/{question}/edit', [BankQuestionController::class, 'edit'])->name('questions.edit');
+        Route::patch('/bank-soal/{question}', [BankQuestionController::class, 'update'])->name('questions.update');
+        Route::post('/bank-soal/{question}/duplicate', [BankQuestionController::class, 'duplicate'])->name('questions.duplicate');
+        Route::delete('/bank-soal/{question}', [BankQuestionController::class, 'destroy'])->name('questions.destroy');
+        Route::get('/paket-soal', [QuestionSetController::class, 'index'])->name('question-sets.index');
+        Route::post('/paket-soal', [QuestionSetController::class, 'store'])->name('question-sets.store');
+        Route::get('/paket-soal/{questionSet}', [QuestionSetController::class, 'show'])->name('question-sets.show');
+        Route::delete('/paket-soal/{questionSet}', [QuestionSetController::class, 'destroy'])->name('question-sets.destroy');
+        Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
+        Route::get('/documents/{document}', [DocumentController::class, 'show'])->name('documents.show');
+        Route::post('/documents/{document}/duplicate', [DocumentController::class, 'duplicate'])->name('documents.duplicate');
+        Route::post('/documents/{document}/regenerate', [DocumentController::class, 'regenerate'])->name('documents.regenerate');
+        Route::patch('/documents/{document}', [DocumentController::class, 'update'])->name('documents.update');
+        Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('documents.destroy');
+        Route::get('/documents/{document}/pdf', [DocumentController::class, 'download'])->name('documents.pdf');
+        Route::get('/documents/{document}/print', [DocumentController::class, 'print'])->name('documents.print');
+        Route::post('/documents/{document}/exports', [DocumentExportController::class, 'store'])->middleware('throttle:5,1')->name('documents.exports.store');
+        Route::get('/document-exports/{export}/download', [DocumentExportController::class, 'download'])->name('documents.exports.download');
+        Route::get('/profile/school', [SchoolController::class, 'edit'])->name('schools.edit');
+        Route::put('/profile/school', [SchoolController::class, 'update'])->name('schools.update');
+        Route::get('/profile/school/logo/{side}', [SchoolController::class, 'logo'])->whereIn('side', ['left', 'right'])->name('schools.logo');
+        Route::get('/subscription', SubscriptionController::class)->name('subscription.index');
+        Route::post('/subscription/checkout/{plan}', [TeacherCheckoutController::class, 'store'])->middleware('throttle:5,1')->name('checkout.store');
+        Route::get('/subscription/checkout/{payment}', [TeacherCheckoutController::class, 'show'])->name('checkout.show');
+        Route::post('/subscription/checkout/{payment}/check', [TeacherCheckoutController::class, 'check'])->middleware('throttle:10,1')->name('checkout.check');
+
+        Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
+            Route::get('/', AdminDashboardController::class)->name('dashboard');
+            Route::resource('teachers', AdminTeacherController::class)->except(['destroy']);
+            Route::patch('teachers/{teacher}/password', [AdminTeacherController::class, 'resetPassword'])->name('teachers.password');
+            Route::post('teachers/{teacher}/subscriptions', [AdminSubscriptionController::class, 'store'])->name('teachers.subscriptions.store');
+            Route::patch('subscriptions/{subscription}/extend', [AdminSubscriptionController::class, 'extend'])->name('subscriptions.extend');
+            Route::resource('plans', AdminPlanController::class)->except(['show', 'destroy']);
+            Route::resource('templates', DocumentTemplateController::class)->except(['show', 'destroy']);
+            Route::post('templates/{template}/sections', [TemplateSectionController::class, 'store'])->name('templates.sections.store');
+            Route::patch('templates/{template}/sections/{section}', [TemplateSectionController::class, 'update'])->name('templates.sections.update');
+            Route::get('payments', [AdminPaymentController::class, 'index'])->name('payments.index');
+            Route::get('payments/create', [AdminPaymentController::class, 'create'])->name('payments.create');
+            Route::post('payments', [AdminPaymentController::class, 'store'])->name('payments.store');
+            Route::patch('payments/{payment}/status', [AdminPaymentController::class, 'updateStatus'])->name('payments.status');
+            Route::get('payments/{payment}/proof', [AdminPaymentController::class, 'downloadProof'])->name('payments.proof');
+            Route::get('audit-logs', AuditLogController::class)->name('audit-logs.index');
+            Route::get('backups', [BackupController::class, 'index'])->name('backups.index');
+            Route::post('backups', [BackupController::class, 'store'])->middleware('throttle:2,60')->name('backups.store');
+            Route::get('backups/{backup}/download', [BackupController::class, 'download'])->name('backups.download');
+            Route::get('backups/{backup}/restore', [BackupController::class, 'restore'])->name('backups.restore');
+            Route::post('backups/upload', [BackupController::class, 'upload'])->middleware('throttle:3,60')->name('backups.upload');
+            Route::post('backups/{backup}/restore', [BackupController::class, 'executeRestore'])->middleware('throttle:2,60')->name('backups.restore.execute');
+            Route::get('settings', [SystemSettingsController::class, 'edit'])->name('settings.edit');
+            Route::put('settings', [SystemSettingsController::class, 'update'])->name('settings.update');
+            Route::get('ai', [AiMonitoringController::class, 'index'])->name('ai.index');
+            Route::post('ai/models/{model}/health/reset', [AiMonitoringController::class, 'resetHealth'])->name('ai.models.health.reset');
+            Route::resource('ai/providers', AiProviderController::class)->except(['show', 'destroy'])->names('ai.providers');
+            Route::resource('ai/models', AiModelController::class)->except(['show', 'destroy'])->names('ai.models');
+            Route::get('ai/routing', [AiRoutingController::class, 'index'])->name('ai.routing.index');
+            Route::put('ai/routing', [AiRoutingController::class, 'update'])->name('ai.routing.update');
+            Route::get('academic', [AcademicController::class, 'index'])->name('academic.index');
+            Route::post('academic/curriculums', [AcademicController::class, 'storeCurriculum'])->name('academic.curriculums.store');
+            Route::patch('academic/curriculums/{curriculum}', [AcademicController::class, 'updateCurriculum'])->name('academic.curriculums.update');
+            Route::post('academic/levels', [AcademicController::class, 'storeLevel'])->name('academic.levels.store');
+            Route::get('academic/levels/{level}', [AcademicController::class, 'showLevel'])->name('academic.levels.show');
+            Route::patch('academic/levels/{level}', [AcademicController::class, 'updateLevel'])->name('academic.levels.update');
+            Route::post('academic/levels/{level}/grades', [AcademicController::class, 'storeGrade'])->name('academic.grades.store');
+            Route::patch('academic/levels/{level}/grades/{grade}', [AcademicController::class, 'updateGrade'])->name('academic.grades.update');
+            Route::post('academic/levels/{level}/subjects', [AcademicController::class, 'storeSubject'])->name('academic.subjects.store');
+            Route::patch('academic/levels/{level}/subjects/{subject}', [AcademicController::class, 'updateSubject'])->name('academic.subjects.update');
+            Route::post('academic/levels/{level}/vocational-programs', [AcademicController::class, 'storeVocationalProgram'])->name('academic.vocational-programs.store');
+            Route::patch('academic/levels/{level}/vocational-programs/{vocationalProgram}', [AcademicController::class, 'updateVocationalProgram'])->name('academic.vocational-programs.update');
+            Route::post('academic/years', [AcademicController::class, 'storeAcademicYear'])->name('academic.years.store');
+            Route::patch('academic/years/{academicYear}', [AcademicController::class, 'updateAcademicYear'])->name('academic.years.update');
+            Route::get('academic/content', [AcademicContentController::class, 'index'])->name('academic.content.index');
+            Route::post('academic/outcomes', [AcademicContentController::class, 'storeOutcome'])->name('academic.outcomes.store');
+            Route::patch('academic/outcomes/{outcome}', [AcademicContentController::class, 'updateOutcome'])->name('academic.outcomes.update');
+            Route::post('academic/outcomes/{outcome}/objectives', [AcademicContentController::class, 'storeObjective'])->name('academic.objectives.store');
+            Route::patch('academic/outcomes/{outcome}/objectives/{objective}', [AcademicContentController::class, 'updateObjective'])->name('academic.objectives.update');
+            Route::post('academic/competencies', [AcademicContentController::class, 'storeCompetency'])->name('academic.competencies.store');
+            Route::patch('academic/competencies/{competency}', [AcademicContentController::class, 'updateCompetency'])->name('academic.competencies.update');
+        });
+    });
+});

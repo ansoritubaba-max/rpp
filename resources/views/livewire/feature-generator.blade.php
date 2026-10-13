@@ -1,0 +1,85 @@
+<div>
+    <div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+        <div><a href="{{ route('create.index') }}" wire:navigate class="mb-3 inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-brand-700"><x-icon name="arrow-left" class="h-4 w-4" /> Pilih perangkat lain</a><p class="eyebrow">Generator terarah</p><h1 class="mt-1 text-3xl font-black tracking-tight text-ink-950">Buat {{ $featureName }}</h1><p class="mt-2 text-sm text-slate-500">Isi konteks kelas, sesuaikan kebutuhan, lalu tinjau hasilnya.</p></div>
+        <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto"><span class="chip bg-brand-50 text-brand-700">Langkah {{ $step }} dari 3</span><span class="chip bg-emerald-50 text-emerald-700">{{ $draftSavedAt ? 'Draf tersimpan '.$draftSavedAt : 'Autosave aktif' }}</span>@if($draftSavedAt)<button type="button" wire:click="discardDraft" wire:confirm="Hapus draf {{ $featureName }} ini dan mulai dari awal?" class="text-xs font-bold text-slate-500 hover:text-rose-700">Hapus draf</button>@endif</div>
+    </div>
+
+    @error('draft')<div class="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{{ $message }}</div>@enderror
+    @if($errors->any() && ! $errors->has('draft'))
+        <div role="alert" class="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"><strong>Periksa kembali isian Anda.</strong> {{ $errors->first() }} Data yang sudah diisi tetap tersimpan.</div>
+    @endif
+
+    <div class="mb-6 grid grid-cols-3 gap-2">
+        @foreach([1 => 'Identitas', 2 => 'Pengaturan', 3 => 'Tinjau'] as $number => $label)
+            <button type="button" wire:click="goToStep({{ $number }})" @disabled($number > $step) class="rounded-xl border px-3 py-3 text-left transition {{ $number === $step ? 'border-brand-300 bg-brand-50 text-brand-800' : ($number < $step ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white text-slate-400') }}"><span class="block text-[10px] font-black uppercase tracking-widest">0{{ $number }}</span><span class="mt-1 block text-xs font-extrabold sm:text-sm">{{ $label }}</span></button>
+        @endforeach
+    </div>
+
+    <form wire:submit="generate" class="surface overflow-hidden">
+        <div class="border-b border-slate-100 px-5 py-4 sm:px-7"><h2 class="font-black text-ink-950">{{ $step === 1 ? 'Identitas pembelajaran' : ($step === 2 ? 'Atur isi '.$featureName : 'Tinjau sebelum dibuat') }}</h2><p class="mt-1 text-xs text-slate-400">{{ $step === 1 ? 'Data ini akan tampil pada kepala dokumen.' : ($step === 2 ? 'Formulir sudah disesuaikan dengan jenis perangkat.' : 'Pastikan ringkasannya sudah sesuai kebutuhan.') }}</p></div>
+
+        <div class="p-5 sm:p-7">
+            @if($step === 1)
+                @if($sourceDocuments->isNotEmpty() || filled($sourceDocumentUuid))
+                    <div class="mb-6 rounded-2xl border border-brand-200 bg-brand-50/70 p-4">
+                        <label class="label" for="source-document">Lanjutkan dari dokumen sebelumnya <span class="font-normal text-slate-500">(opsional)</span></label>
+                        <select id="source-document" wire:model.live="sourceDocumentUuid" class="field mt-2"><option value="">Mulai tanpa dokumen sumber</option>@foreach($sourceDocuments as $sourceDocument)<option value="{{ $sourceDocument->uuid }}">{{ $sourceDocument->feature->name }} · {{ $sourceDocument->title }}</option>@endforeach</select>
+                        <p class="mt-2 text-xs text-brand-700">Sekolah, kelas, mapel, semester, dan materi akan terisi dari dokumen pilihan Anda.</p>
+                        @error('sourceDocumentUuid')<p class="field-error">{{ $message }}</p>@enderror
+                    </div>
+                @endif
+                <div class="grid gap-5 md:grid-cols-2">
+                    <label><span class="label">Sekolah</span><select wire:model.live="schoolId" class="field"><option value="">Pilih sekolah</option>@foreach($schools as $school)<option value="{{ $school->id }}">{{ $school->name }}</option>@endforeach</select>@error('schoolId')<span class="field-error">{{ $message }}</span>@enderror</label>
+                    <label><span class="label">Tahun pelajaran</span><input wire:model.live.debounce.800ms="academicYear" class="field" placeholder="2026/2027">@error('academicYear')<span class="field-error">{{ $message }}</span>@enderror</label>
+                    <label><span class="label">Kurikulum</span><select wire:model.live="curriculumId" class="field"><option value="">Pilih kurikulum</option>@foreach($curriculums as $curriculum)<option value="{{ $curriculum->id }}">{{ $curriculum->name }}</option>@endforeach</select>@error('curriculumId')<span class="field-error">{{ $message }}</span>@enderror</label>
+                    <label><span class="label">Jenjang</span><select wire:model.live="educationLevelId" class="field"><option value="">Pilih jenjang</option>@foreach($levels as $level)<option value="{{ $level->id }}">{{ $level->name }}</option>@endforeach</select>@error('educationLevelId')<span class="field-error">{{ $message }}</span>@enderror</label>
+                    @if($isSmk)<label><span class="label">Konsentrasi keahlian</span><select wire:model.live="vocationalProgramId" class="field"><option value="">Pilih jurusan SMK</option>@foreach($vocationalPrograms as $program)<option value="{{ $program->id }}">{{ $program->code }} — {{ $program->name }}</option>@endforeach</select>@error('vocationalProgramId')<span class="field-error">{{ $message }}</span>@enderror</label>@endif
+                    <label><span class="label">Kelas</span><select wire:model.live="gradeId" class="field"><option value="">Pilih kelas</option>@foreach($grades as $grade)<option value="{{ $grade->id }}">{{ $grade->name }}</option>@endforeach</select>@error('gradeId')<span class="field-error">{{ $message }}</span>@enderror</label>
+                    <label><span class="label">Mata pelajaran</span><select wire:model.live="subjectId" class="field"><option value="">Pilih mata pelajaran</option>@foreach($subjects as $subject)<option value="{{ $subject->id }}">{{ $subject->name }}</option>@endforeach</select>@error('subjectId')<span class="field-error">{{ $message }}</span>@enderror</label>
+                    <label><span class="label">Semester</span><select wire:model.live="semester" class="field"><option value="1">Semester 1</option><option value="2">Semester 2</option></select></label>
+                </div>
+            @elseif($step === 2)
+                <div class="grid gap-5 md:grid-cols-2">
+                    <label class="md:col-span-2"><span class="label">Materi utama</span><input wire:model.live.debounce.800ms="topic" class="field" placeholder="Contoh: Pecahan sederhana">@error('topic')<span class="field-error">{{ $message }}</span>@enderror</label>
+                    <label class="md:col-span-2"><span class="label">Submateri <span class="font-normal text-slate-400">(opsional)</span></span><input wire:model.live.debounce.800ms="subtopic" class="field" placeholder="Fokus pembahasan tertentu">@error('subtopic')<span class="field-error">{{ $message }}</span>@enderror</label>
+
+                    @if($featureCode === 'modul_ajar')
+                        <label><span class="label">Jumlah pertemuan</span><input type="number" wire:model.live.debounce.800ms="meetings" class="field" min="1" max="20"></label><label><span class="label">JP per pertemuan</span><input type="number" wire:model.live.debounce.800ms="jp" class="field" min="1" max="12"></label>
+                        <label><span class="label">Model pembelajaran</span><select wire:model.live="learningModel" class="field"><option>Problem Based Learning</option><option>Project Based Learning</option><option>Discovery Learning</option><option>Pembelajaran Langsung</option></select></label><label><span class="label">Kondisi peserta didik</span><select wire:model.live="studentCondition" class="field"><option>Heterogen</option><option>Relatif setara</option><option>Memerlukan pendampingan</option></select></label>
+                    @elseif($featureCode === 'silabus')
+                        <label><span class="label">Cakupan</span><select wire:model.live="syllabusMode" class="field"><option value="semester">Satu semester</option><option value="satu_materi">Satu materi</option></select></label><label><span class="label">Minggu efektif</span><input type="number" wire:model.live.debounce.800ms="effectiveWeeks" class="field" min="1" max="30">@error('effectiveWeeks')<span class="field-error">{{ $message }}</span>@enderror</label><label><span class="label">JP per minggu</span><input type="number" wire:model.live.debounce.800ms="jpPerWeek" class="field" min="1" max="20">@error('jpPerWeek')<span class="field-error">{{ $message }}</span>@enderror</label>
+                    @elseif($featureCode === 'lkpd')
+                        <label><span class="label">Jumlah aktivitas</span><input type="number" wire:model.live.debounce.800ms="activityCount" class="field" min="1" max="10"></label><label><span class="label">Tingkat kesulitan</span><select wire:model.live="difficulty" class="field"><option value="mudah">Mudah</option><option value="sedang">Sedang</option><option value="sulit">Sulit</option></select></label><label><span class="label">Bentuk aktivitas</span><select wire:model.live="activityType" class="field"><option value="individu_kelompok">Individu & kelompok</option><option value="individu">Individu</option><option value="kelompok">Kelompok</option></select></label><label><span class="label">Kemampuan membaca</span><select wire:model.live="readingAbility" class="field"><option value="normal">Lancar</option><option value="dasar">Dasar</option><option value="belum_lancar">Belum lancar</option></select></label>
+                    @elseif($featureCode === 'soal')
+                        <label><span class="label">Bentuk soal</span><select wire:model.live="questionType" class="field"><option value="pilihan_ganda">Pilihan ganda</option><option value="uraian">Uraian</option><option value="campuran">Campuran</option></select></label><label><span class="label">Jumlah soal</span><select wire:model.live="questionCount" class="field">@foreach([5,10,20,25,50] as $count)<option value="{{ $count }}">{{ $count }} soal</option>@endforeach</select></label><label><span class="label">Tingkat kesulitan</span><select wire:model.live="difficulty" class="field"><option value="mudah">Mudah</option><option value="sedang">Sedang</option><option value="sulit">Sulit</option></select></label>
+                        <label><span class="label">Kemampuan membaca</span><select wire:model.live="readingAbility" class="field"><option value="normal">Lancar</option><option value="dasar">Dasar</option><option value="belum_lancar">Belum lancar</option></select></label>
+                        <label class="md:col-span-2 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-bold text-slate-700"><input type="checkbox" wire:model.live="illustratedQuestions" class="h-4 w-4 rounded border-slate-300 text-brand-600"> Gunakan gambar dari pustaka internal</label>
+                        @if($visualQuestionMode)
+                            <label><span class="label">Gambar soal</span><select wire:model.live="imageAsset" class="field">@foreach($questionAssets as $key => $asset)<option value="{{ $key }}">{{ $asset['category'] }} · {{ $asset['label'] }}</option>@endforeach</select>@error('imageAsset')<span class="field-error">{{ $message }}</span>@enderror</label>
+                            <label><span class="label">Jumlah gambar awal</span><input type="number" wire:model.live.debounce.800ms="imageCount" min="1" max="8" class="field">@error('imageCount')<span class="field-error">{{ $message }}</span>@enderror</label>
+                            <p class="md:col-span-2 text-xs text-slate-500">Soal dibuat dengan gambar lokal dan instruksi singkat. Untuk kelas 1–3 yang belum lancar membaca, mode ini aktif otomatis.</p>
+                        @endif
+                        <div class="md:col-span-2 grid gap-3 sm:grid-cols-2">@foreach([['hots','Sertakan soal HOTS'],['storyQuestions','Sertakan soal cerita'],['includeAnswer','Sertakan kunci jawaban'],['includeExplanation','Sertakan pembahasan'],['includeBlueprint','Buat kisi-kisi ringkas']] as [$model,$label])<label class="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-bold text-slate-700"><input type="checkbox" wire:model.live="{{ $model }}" class="h-4 w-4 rounded border-slate-300 text-brand-600">{{ $label }}</label>@endforeach</div>
+                    @elseif($featureCode === 'kisi_kisi')
+                        <label><span class="label">Sumber</span><select wire:model.live="sourceMode" class="field"><option value="materi">Materi yang diisi</option><option value="dokumen">Dokumen pembelajaran</option></select></label><label><span class="label">Jumlah butir</span><input type="number" wire:model.live.debounce.800ms="questionCount" class="field" min="5" max="50"></label><label><span class="label">Rentang kognitif</span><select wire:model.live="cognitiveLevel" class="field"><option>C1-C3</option><option>C2-C4</option><option>C3-C5</option><option>C4-C6</option></select></label>
+                    @elseif(in_array($featureCode, ['prota','promes']))
+                        @if($featureCode === 'prota')<label><span class="label">Total JP setahun</span><input type="number" wire:model.live.debounce.800ms="totalJp" class="field" min="10" max="500"></label>@endif<label><span class="label">Minggu efektif</span><input type="number" wire:model.live.debounce.800ms="effectiveWeeks" class="field" min="1" max="52"></label><label class="md:col-span-2"><span class="label">Daftar materi/unit <span class="font-normal text-slate-400">(satu per baris)</span></span><textarea wire:model.live.debounce.800ms="topicList" class="field min-h-36" placeholder="Bilangan bulat&#10;Pecahan&#10;Bangun datar"></textarea></label>
+                    @elseif($featureCode === 'atp')
+                        <label class="md:col-span-2"><span class="label">Capaian Pembelajaran</span><textarea wire:model.live.debounce.800ms="learningOutcome" class="field min-h-36" placeholder="Tuliskan capaian pembelajaran fase ini..."></textarea>@error('learningOutcome')<span class="field-error">{{ $message }}</span>@enderror</label><label><span class="label">Jumlah tujuan</span><input type="number" wire:model.live.debounce.800ms="objectiveCount" class="field" min="2" max="20"></label>
+                    @endif
+                </div>
+            @else
+                <div class="grid gap-6 lg:grid-cols-[1fr_.7fr]">
+                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5"><p class="eyebrow">Ringkasan</p><dl class="mt-4 grid gap-4 text-sm sm:grid-cols-2"><div><dt class="text-xs text-slate-400">Jenis perangkat</dt><dd class="mt-1 font-extrabold text-slate-800">{{ $featureName }}</dd></div><div><dt class="text-xs text-slate-400">Tahun / semester</dt><dd class="mt-1 font-extrabold text-slate-800">{{ $academicYear }} · Semester {{ $semester }}</dd></div><div><dt class="text-xs text-slate-400">Materi</dt><dd class="mt-1 font-extrabold text-slate-800">{{ $topic ?: 'Belum diisi' }}</dd></div><div><dt class="text-xs text-slate-400">Keluaran</dt><dd class="mt-1 font-extrabold text-slate-800">Dokumen, PDF, dan riwayat versi</dd></div></dl></div>
+                    <label><span class="label">Catatan untuk penyusunan <span class="font-normal text-slate-400">(opsional)</span></span><textarea wire:model.live.debounce.800ms="teacherNotes" class="field min-h-40" placeholder="Contoh: gunakan contoh yang dekat dengan kehidupan siswa..."></textarea>@error('teacherNotes')<span class="field-error">{{ $message }}</span>@enderror</label>
+                </div>
+                @error('generate')<div class="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">{{ $message }}@if($showUpgradeOffer)<a href="{{ route('subscription.index') }}#pilih-paket" class="mt-2 block font-black underline">Lihat paket & upgrade →</a>@endif</div>@enderror
+            @endif
+        </div>
+
+        <div class="flex items-center justify-between border-t border-slate-100 bg-slate-50/70 px-5 py-4 sm:px-7">
+            @if($step > 1)<button type="button" wire:click="previousStep" class="btn-secondary"><x-icon name="arrow-left" /> Kembali</button>@else<span></span>@endif
+            @if($step < 3)<button type="button" wire:click="nextStep" class="btn-primary">Lanjutkan <x-icon name="arrow-right" /></button>@else<button type="submit" class="btn-primary" wire:loading.attr="disabled"><span wire:loading.remove wire:target="generate" class="inline-flex items-center gap-2"><x-icon name="sparkles" /> Buat {{ $featureName }}</span><span wire:loading wire:target="generate">Sedang menyusun...</span></button>@endif
+        </div>
+    </form>
+</div>

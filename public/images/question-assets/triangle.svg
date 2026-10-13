@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Segitiga">
+  <rect width="64" height="64" rx="14" fill="#f5f3ff"/>
+  <path d="M32 10 56 52H8Z" fill="#a78bfa" stroke="#6d28d9" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M32 18 49 48H15Z" fill="#ddd6fe" opacity=".65"/>
+</svg>

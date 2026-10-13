@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Buku">
+  <rect width="64" height="64" rx="14" fill="#eff6ff"/>
+  <path d="M8 17c8-3 16-2 24 3v31c-8-5-16-6-24-3Zm48 0c-8-3-16-2-24 3v31c8-5 16-6 24-3Z" fill="#60a5fa" stroke="#1d4ed8" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M32 20v31M14 25c5-1 9 0 13 2m10 0c4-2 8-3 13-2M14 33c5-1 9 0 13 2m10 0c4-2 8-3 13-2" fill="none" stroke="#dbeafe" stroke-width="2" stroke-linecap="round"/>
+</svg>
